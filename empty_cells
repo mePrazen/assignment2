@@ -1,3 +1,34 @@
 #!/bin/bash
 
+# Validate file exists and is readable
+if [[ -z $1 ]]
+then
+    echo "ERROR: No input file!" > /dev/stderr
+    exit 2
+elif [ ! -f "$1" ]
+then
+    echo "Error: The specified input file '$1' does not exist or is empty." > /dev/stderr
+    exit 1
+fi
+
+filename="$1"
+sep=";"
+
+# Gets column names
+headers=$(head -n 1 "$filename")
+
+# Counts number of total columns
+num_cols=$(( $(echo "$headers" | grep -o "$sep" | wc -l) + 1 ))
+
+# Count empty cells per column
+for ((i=1; i<=num_cols; i++))
+do
+    # Extract and trim column name
+    col_name=$(echo "$headers" | cut -d"$sep" -f"$i" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+    # Count empty cells in the column
+    empty_count=$(tail -n +2 "$filename" | cut -d"$sep" -f"$i" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -cx '^$')
+
+    echo "$col_name: $empty_count"
+done
 
