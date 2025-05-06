@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Ensure the script gets a filename as input
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <filename>"
+    exit 1
+fi
+
+filename="$1"
+
+# Apply sed to the input file and replace semicolons with tabs
+sed 's/\r//' "$filename" | sed -E 's/([0-9]+),([0-9]+)/\1.\2/g' | tr -cd '\11\12\15\40-\176' | sed 's/;/\t/g'
