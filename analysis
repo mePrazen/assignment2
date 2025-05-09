@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Check if input file is provided
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <cleaned_tsv_file>"
+    exit 1
+fi
+
+input_file="$1"
+
+# Function to find most common value in a column
+find_most_common() {
+    local col=$1
+    local label=$2
+
+    cut -f"$col" "$input_file" | tail -n +2 | \
+        tr ',' '\n' | \
+        sed 's/^[ \t]*//; s/[ \t]*$//' | \
+        grep -v '^$' | \
+        sort | uniq -c | sort -nr | head -1 | \
+        sed -E "s/^[[:space:]]*([0-9]+)[[:space:]]+(.*)/The most $label is \2 found in \1 games/"
+}
+
+### MAIN OUTPUT
+# 1. Most popular mechanics (column 13)
+find_most_common 13 "popular game mechanics"
+
+# 2. Most common domain (column 14)
+find_most_common 14 "game domain"
+
