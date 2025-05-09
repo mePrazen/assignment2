@@ -1,12 +1,54 @@
 #!/bin/bash
 
-# Ensure the script gets a filename as input
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <filename>"
+# Validate file exists and is readable
+if [[ -z $1 ]]
+then
+    echo "ERROR: No input file!" > /dev/stderr
+    exit 2
+elif [ ! -f "$1" ]
+then
+    echo "Error: The specified input file '$1' does not exist or is empty." > /dev/stderr
     exit 1
 fi
 
 filename="$1"
 
-# Apply sed to the input file and replace semicolons with tabs
-sed 's/\r//' "$filename" | sed -E 's/([0-9]+),([0-9]+)/\1.\2/g' | tr -cd '\11\12\15\40-\176' | sed 's/;/\t/g'
+# Convert the Microsoft line endings to Unix line endings
+no_cr_data=$(sed 's/\r//' "$filename")
+
+# Change format of floating-point numbers (e.g., "1,23" → "1.23")
+fixed_decimals_data=$(echo "$no_cr_data" | sed -E 's/([0-9]+),([0-9]+)/\1.\2/g')
+
+# Remove any non-ASCII characters
+clean_chars_data=$(echo "$fixed_decimals_data" | tr -cd '\11\12\15\40-\176')
+
+# Replace semicolons with tabs
+tab_separated_data=$(echo "$clean_chars_data" | sed 's/;/\t/g')
+
+# Assign the final cleaned data
+cleaned_data="$tab_separated_data"
+
+# Find max ID
+max_id=$(echo "$cleaned_data" | tail -n +2 | grep -E '^[0-9]+\t' | cut -f1 | sort -n | tail -1)
+[ -z "$max_id" ] && max_id=0
+
+# Assign missing IDs
+line_num=0
+echo "$cleaned_data" | while read -r line; do
+    line_num=$((line_num + 1))
+    
+    # Keep header unchanged
+    if [ "$line_num" -eq 1 ]; then
+        echo "$line"
+        continue
+    fi
+
+    if echo "$line" | grep -q '^[0-9]'; then
+        echo "$line"
+        current_id=$(echo "$line" | cut -f1)
+        [ "$current_id" -gt "$max_id" ] && max_id="$current_id"
+    else
+        max_id=$((max_id + 1))
+        echo -e "${max_id}\t$line"
+    fi
+done
