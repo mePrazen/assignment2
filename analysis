@@ -21,10 +21,56 @@ find_most_common() {
         sed -E "s/^[[:space:]]*([0-9]+)[[:space:]]+(.*)/The most $label is \2 found in \1 games/"
 }
 
+# Function to calculate Pearson correlation
+calculate_correlation() {
+    local x_col=$1
+    local y_col=$2
+    local desc="$3"
+
+    paste <(cut -f"$x_col" "$input_file" | tail -n +2) <(cut -f"$y_col" "$input_file" | tail -n +2) | \
+    grep -vE '^\s*$' | \
+    awk '
+    {
+        x=$1; y=$2;
+        if(x ~ /^[0-9.]+$/ && y ~ /^[0-9.]+$/) {
+            sum_x += x;
+            sum_y += y;
+            sum_x2 += x*x;
+            sum_y2 += y*y;
+            sum_xy += x*y;
+            n++;
+        }
+    }
+    END {
+        if(n < 2) {
+            print "The correlation between " desc " is undefined (insufficient data)";
+            exit;
+        }
+        numerator = n * sum_xy - sum_x * sum_y;
+        denom1 = sqrt(n * sum_x2 - sum_x * sum_x);
+        denom2 = sqrt(n * sum_y2 - sum_y * sum_y);
+        if(denom1 == 0 || denom2 == 0) {
+            print "The correlation between " desc " is undefined";
+        } else {
+            corr = numerator / (denom1 * denom2);
+            printf("The correlation between %s is %.3f\n", desc, corr);
+        }
+    }' desc="$desc"
+}
+
 ### MAIN OUTPUT
+echo "Game Analysis Results:"
+echo "----------------------"
+
 # 1. Most popular mechanics (column 13)
 find_most_common 13 "popular game mechanics"
 
 # 2. Most common domain (column 14)
 find_most_common 14 "game domain"
+
+# 3. Correlation: Year Published (3) vs Rating Average (9)
+calculate_correlation 3 9 "the year of publication and the average rating"
+
+# 4. Correlation: Complexity Average (11) vs Rating Average (9)
+calculate_correlation 11 9 "the complexity of a game and its average rating"
 
