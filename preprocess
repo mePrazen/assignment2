@@ -1,14 +1,30 @@
 #!/bin/bash
 
+# Validate the number of arguments
+if [[ $# -ne 1 ]]
+then
+    echo "ERROR: This script requires exactly one .txt file as an argument." > /dev/stderr
+    exit 3
+fi
+
+# Validate file extension is .txt
+if [[ $1 != *.txt ]]
+then
+    echo "ERROR: The input file must have a .txt extension." > /dev/stderr
+    exit 4
+fi
+
 # Validate file exists and is readable
-if [[ -z $1 ]]
+if [[ ! -f "$1" ]]
 then
-    echo "ERROR: No input file!" > /dev/stderr
-    exit 2
-elif [ ! -f "$1" ]
-then
-    echo "Error: The specified input file '$1' does not exist or is empty." > /dev/stderr
+    echo "ERROR: The specified file '$1' does not exist." > /dev/stderr
     exit 1
+fi
+
+if [[ ! -r "$1" ]]
+then
+    echo "ERROR: The specified file '$1' is not readable." > /dev/stderr
+    exit 2
 fi
 
 filename="$1"
@@ -16,7 +32,7 @@ filename="$1"
 # Convert the Microsoft line endings to Unix line endings
 no_cr_data=$(sed 's/\r//' "$filename")
 
-# Change format of floating-point numbers (e.g., "1,23" → "1.23")
+# Change format of floating-point numbers
 fixed_decimals_data=$(echo "$no_cr_data" | sed -E 's/([0-9]+),([0-9]+)/\1.\2/g')
 
 # Remove any non-ASCII characters
